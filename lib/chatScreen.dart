@@ -12,10 +12,13 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Olá'),
+        centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.blueAccent,
       ),
-      body: TextComposer(),
+      body: TextComposer((text) {
+        print(text);
+      }),
     );
   }
 }
