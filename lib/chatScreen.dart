@@ -1,9 +1,9 @@
 import 'dart:io';
-
 import 'package:chat/text_composer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class ChatScreen extends StatefulWidget {
   @override
@@ -12,12 +12,14 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
 
-  void sendMessage({String text, File img}) async {
 
-    if(img != null){
-      StorageUploadTask task = FirebaseStorage.instance.ref().child(
-        DateTime.now().millisecondsSinceEpoch.toString()
-      ).putFile(img);
+
+  void sendMessage({String text, File img}) async {
+    if (img != null) {
+      StorageUploadTask task = FirebaseStorage.instance
+          .ref()
+          .child(DateTime.now().millisecondsSinceEpoch.toString())
+          .putFile(img);
 
       StorageTaskSnapshot taskSnapshot = await task.onComplete;
       String url = await taskSnapshot.ref.getDownloadURL();
@@ -36,7 +38,37 @@ class _ChatScreenState extends State<ChatScreen> {
         elevation: 0,
         backgroundColor: Colors.blueAccent,
       ),
-      body: TextComposer(sendMessage),
-    );
+      body: Column(
+        children: <Widget>[
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                Firestore.instance.collection('messages').snapshots(),
+                builder: (context, snapshot) {
+                  switch (snapshot.connectionState) {
+                    case ConnectionState.none:
+                    case ConnectionState.waiting:
+                      return Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    default:
+                      List<DocumentSnapshot> documents =
+                        snapshot.data.documents.reversed.toList();
+
+                      return ListView.builder(
+                        itemCount: documents.length,
+                        reverse: true,
+                        itemBuilder: (context, index){
+                          return ListTile(
+                            title: Text(documents[index].data['text']),
+                          );
+                        },
+                      );
+                  }
+                })
+              ),
+            TextComposer(sendMessage),
+          ],
+        ));
   }
 }

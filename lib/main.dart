@@ -5,10 +5,6 @@ import 'package:flutter/material.dart';
 void main() async {
   runApp(MyApp());
 
-  Firestore.instance.collection('mensagens').document('msg1').setData({
-    'msg':'ok'
-  });
-
 }
 
 class MyApp extends StatelessWidget {
