@@ -24,7 +24,9 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
 
     FirebaseAuth.instance.onAuthStateChanged.listen((user) {
-      _currentUser = user;
+      setState(() {
+        _currentUser = user;
+      });
     });
   }
 
@@ -68,6 +70,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'uid': user.uid,
       'senderName': user.displayName,
       'senderPhotourl': user.photoUrl,
+      'time': Timestamp.now(),
     };
 
     if (img != null) {
@@ -89,9 +92,26 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
         key: _scaffoldKey,
         appBar: AppBar(
-          title: Text('Olá'),
+          title: Text(_currentUser != null
+              ? 'Olá, ${_currentUser.displayName}'
+              : 'Chat App'),
           centerTitle: true,
           elevation: 0,
+          actions: <Widget>[
+            _currentUser != null
+                ? IconButton(
+                    icon: Icon(Icons.exit_to_app),
+                    onPressed: () {
+                      FirebaseAuth.instance.signOut();
+                      googleSignIn.signOut();
+                      _scaffoldKey.currentState.showSnackBar(SnackBar(
+                        content: Text(
+                            'Você saiu com sucesso'),
+                        backgroundColor: Colors.green,
+                      ));
+                    })
+                : Container()
+          ],
           backgroundColor: Colors.blueAccent,
         ),
         body: Column(
@@ -99,7 +119,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                     stream:
-                        Firestore.instance.collection('messages').snapshots(),
+                        Firestore.instance.collection('messages').orderBy('time').snapshots(),
                     builder: (context, snapshot) {
                       switch (snapshot.connectionState) {
                         case ConnectionState.none:
@@ -114,7 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           return ListView.builder(
                             itemCount: documents.length,
                             reverse: true,
-                            itemBuilder: (context, index){
+                            itemBuilder: (context, index) {
                               return ChatMessage(documents[index].data, true);
                             },
                           );
