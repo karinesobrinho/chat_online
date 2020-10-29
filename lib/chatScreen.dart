@@ -17,6 +17,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  bool _isLoading = false;
+
   FirebaseUser _currentUser;
 
   @override
@@ -76,15 +78,25 @@ class _ChatScreenState extends State<ChatScreen> {
     if (img != null) {
       StorageUploadTask task = FirebaseStorage.instance
           .ref()
-          .child(DateTime.now().millisecondsSinceEpoch.toString())
+          .child(user.uid + DateTime.now().millisecondsSinceEpoch.toString())
           .putFile(img);
+
+      setState(() {
+        _isLoading = true;
+      });
 
       StorageTaskSnapshot taskSnapshot = await task.onComplete;
       String url = await taskSnapshot.ref.getDownloadURL();
       print(url);
+
+      setState(() {
+        _isLoading = false;
+      });
     }
 
-    Firestore.instance.collection('message').add({'text': text});
+    if (text != null) data['text'] = text;
+
+    Firestore.instance.collection('message').add(data);
   }
 
   @override
@@ -105,8 +117,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       FirebaseAuth.instance.signOut();
                       googleSignIn.signOut();
                       _scaffoldKey.currentState.showSnackBar(SnackBar(
-                        content: Text(
-                            'Você saiu com sucesso'),
+                        content: Text('Você saiu com sucesso'),
                         backgroundColor: Colors.green,
                       ));
                     })
@@ -118,8 +129,10 @@ class _ChatScreenState extends State<ChatScreen> {
           children: <Widget>[
             Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-                    stream:
-                        Firestore.instance.collection('messages').orderBy('time').snapshots(),
+                    stream: Firestore.instance
+                        .collection('messages')
+                        .orderBy('time')
+                        .snapshots(),
                     builder: (context, snapshot) {
                       switch (snapshot.connectionState) {
                         case ConnectionState.none:
@@ -135,11 +148,15 @@ class _ChatScreenState extends State<ChatScreen> {
                             itemCount: documents.length,
                             reverse: true,
                             itemBuilder: (context, index) {
-                              return ChatMessage(documents[index].data, true);
+                              return ChatMessage(
+                                  documents[index].data,
+                                  documents[index].data['uid'] ==
+                                      _currentUser?.uid);
                             },
                           );
                       }
                     })),
+            _isLoading ? LinearProgressIndicator() : Container(),
             TextComposer(sendMessage),
           ],
         ));
